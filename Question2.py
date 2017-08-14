@@ -1,3 +1,4 @@
+import pandas
 class Team:
     def __init__(self,teamName,divisionName,conferenceName):
         self.teamName=teamName
@@ -21,3 +22,8 @@ class Game:
             return True
         else:
             return False
+division_Info=pandas.read_csv("Division_Info.csv")
+nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
+numberOfTeams=[]
+for index, row in division_Info.iterrows():
+    numberOfTeams.append(Team(row[0],row[1],row[2]))
