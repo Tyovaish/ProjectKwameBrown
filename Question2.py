@@ -5,6 +5,12 @@ class Team:
         self.divisionName=divisionName
         self.conferenceName=conferenceName
         self.gamesPlayedByTeam=[]
+        self.winLossGeneral = 0
+        self.winLossD = {}
+        self.homeScore = 0
+        self.awayScore = 0
+        self.homeRecord = 0
+        self.awayRecord = 0
     def addGame(self,game):
         self.gamesPlayedByTeam.append(game)
 
@@ -24,6 +30,6 @@ class Game:
             return False
 division_Info=pandas.read_csv("Division_Info.csv")
 nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
-numberOfTeams=[]
+teams = {}
 for index, row in division_Info.iterrows():
-    numberOfTeams.append(Team(row[0],row[1],row[2]))
+    teams[row[0]] = Team(row[0],row[1],row[2])
