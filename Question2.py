@@ -10,10 +10,16 @@ class Team:
         self.winLossD = {}
     def addGame(self,game):
         self.gamesPlayedByTeam.append(game)
+        if game.getOpposingTeam(self).teamName not in self.winLossD:
+            self.winLossD[game.getOpposingTeam(self).teamName]=[0,0]
+
         if game.isWinner(self):
             self.winGeneral += 1
+            self.winLossD[game.getOpposingTeam(self).teamName][0]+=1
         else:
             self.lossGeneral += 1
+            self.winLossD[game.getOpposingTeam(self).teamName][1] += 1
+
     def printData(self):
         print(self.teamName,' ',str(self.winGeneral),'-',str(self.lossGeneral))
 
@@ -30,6 +36,12 @@ class Game:
         if self.awayTeam==team and self.awayScore>self.homeScore:
             return True
         return False
+    def getOpposingTeam(self,team):
+        if self.homeTeam==team:
+            return self.awayTeam
+        else:
+            return self.homeTeam
+
     def printData(self):
         print(self.homeTeam.teamName, ' ', self.awayTeam.teamName)
 
@@ -45,5 +57,5 @@ for index, row in nba_Season.iterrows():
     teams[row[1]].addGame(gamePlayed)
     teams[row[2]].addGame(gamePlayed)
 
-for teamName,teamData in teams.items():
-    teamData.printData()
+for teamName,winsLoss in teams['Boston Celtics'].winLossD.items():
+    print(teamName,' Wins:',winsLoss[0] ,'Losses',winsLoss[1])
