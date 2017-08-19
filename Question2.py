@@ -1,4 +1,5 @@
 import pandas
+import time
 class Team:
     def __init__(self,teamName,divisionName,conferenceName):
         self.teamName=teamName
@@ -8,24 +9,32 @@ class Team:
         self.winGeneral = 0
         self.lossGeneral= 0
         self.winLossD = {}
+        self.inPlayoffContention=True
     def addGame(self,game):
         self.gamesPlayedByTeam.append(game)
         if game.getOpposingTeam(self).teamName not in self.winLossD:
             self.winLossD[game.getOpposingTeam(self).teamName]=[0,0]
-
         if game.isWinner(self):
             self.winGeneral += 1
             self.winLossD[game.getOpposingTeam(self).teamName][0]+=1
         else:
             self.lossGeneral += 1
             self.winLossD[game.getOpposingTeam(self).teamName][1] += 1
+    def numberOfGamesLeft(self):
+        return 82-len(self.gamesPlayedByTeam)
+    def gamesAfterAndOnDate(self,date):
+        games=[]
+        for i in self.gamesPlayedByTeam:
+            if i.date>=time.strptime(date,"%m/%d/%Y"):
+                games.append(i)
+        return games
 
     def printData(self):
         print(self.teamName,' ',str(self.winGeneral),'-',str(self.lossGeneral))
 
 class Game:
     def __init__(self,date,homeTeam, awayTeam, homeScore,awayScore):
-        self.date=date
+        self.date=time.strptime(date,"%m/%d/%Y")
         self.homeTeam=homeTeam
         self.awayTeam=awayTeam
         self.homeScore=homeScore
@@ -44,7 +53,6 @@ class Game:
 
     def printData(self):
         print(self.homeTeam.teamName, ' ', self.awayTeam.teamName)
-
 
 division_Info=pandas.read_csv("Division_Info.csv")
 nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
