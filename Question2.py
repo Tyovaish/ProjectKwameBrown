@@ -5,66 +5,81 @@ class Team:
         self.teamName=teamName
         self.divisionName=divisionName
         self.conferenceName=conferenceName
-        self.gamesPlayedByTeam=[]
-        self.winGeneral = 0
-        self.lossGeneral= 0
+        self.numberOfWins = 0
+        self.numberOfLosses= 0
         self.winLossD = {}
-        self.inPlayoffContention=True
-    def addGame(self,game):
-        self.gamesPlayedByTeam.append(game)
-        if game.getOpposingTeam(self.teamName) not in self.winLossD:
+        self.pointDifferentialPerTeam={}
+
+    def updateTeamStats(self,game):
+        opposingTeamName=game.getOpposingTeam(self.teamName)
+        if opposingTeamName not in self.winLoss:
             self.winLossD[game.getOpposingTeam(self.teamName)]=[0,0]
+        if opposingTeamName not in self.winLossPercentagePerTeam:
+            self.pointDifferentialPerTeam[opposingTeamName] =0
+
         if game.isWinner(self.teamName):
-            self.winGeneral += 1
-            self.winLossD[game.getOpposingTeam(self.teamName)][0]+=1
+            self.numberOfWins += 1
+            self.winLossD[opposingTeamName][0]+=1
         else:
-            self.lossGeneral += 1
-            self.winLossD[game.getOpposingTeam(self.teamName)][1] += 1
-    def numberOfGamesLeft(self):
-        return 82-len(self.gamesPlayedByTeam)
-    def gamesAfterAndOnDate(self,date):
-        games=[]
-        for i in self.gamesPlayedByTeam:
-            if i.date>=time.strptime(date,"%m/%d/%Y"):
-                games.append(i)
-        return games
+            self.numberOfLosses += 1
+            self.winLossD[opposingTeamName][1] += 1
+        opposingTeamScore=game.getTeamScore(opposingTeamName)
+        teamScore=game.getTeamScore(self.teamName)
+        self.pointDifferentialPerTeam=teamScore-opposingTeamScore
+
+    def getWinPercentage(self,teams):
+        totalGamesPlayed=0
+        totalInDivisionWins=0
+        for opposingTeamName in teams:
+                totalGamesPlayed+=self.winLossD[opposingTeamName][0]+self.winLoss[opposingTeamName][1]
+                totalInDivisionWins+=self.winLoss[opposingTeamName][0]
+        return totalInDivisionWins/totalGamesPlayed
+
+    def getPointDifferential(self,teams):
+        totalPointDifferential=0
+        for opposingTeamName in teams:
+               totalPointDifferential+=self.pointDifferentialPerTeam[opposingTeamName]
+        return totalPointDifferential
 
     def printData(self):
-        print(self.teamName,' ',str(self.winGeneral),'-',str(self.lossGeneral))
+        print(self.teamName,' ',str(self.numberOfWins),'-',str(self.numberOfLosses))
 
 class Game:
-    def __init__(self,date,homeTeam, awayTeam, homeScore,awayScore):
+    def __init__(self,date,homeTeam, awayTeam, homeScore,awayScore,winningTeam):
         self.date=time.strptime(date,"%m/%d/%Y")
         self.homeTeam=homeTeam
         self.awayTeam=awayTeam
         self.homeScore=homeScore
         self.awayScore=awayScore
+        self.winner=0
+        if winningTeam=='Home':
+            self.winner=homeTeam
+        else:
+            self.winner=awayTeam
+
     def isWinner(self,team):
-        if self.homeTeam == team and self.homeScore>self.awayScore:
+        if team==self.winner:
             return True
-        if self.awayTeam == team and self.awayScore>self.homeScore:
-            return True
-        return False
+        else:
+            return False
     def getOpposingTeam(self,team):
         if self.homeTeam==team:
             return self.awayTeam
         else:
             return self.homeTeam
-
+    def getTeamScore(self,team):
+        if self.homeTeam == team:
+            return self.homeScore
+        else:
+            return self.awayScore
     def printData(self):
         print(self.homeTeam.teamName, ' ', self.awayTeam.teamName)
+class Conference:
+    def __init__(self,competingConference,conferenceTeams,gamesOfTeamsInConference):
+        self.competingConference=competingConference
+        self.conferenceTeams=conferenceTeams
+        self.gamesPlayedByTeams=gamesOfTeamsInConference
 
 division_Info=pandas.read_csv("Division_Info.csv")
 nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
 teams = {}
-for index, row in division_Info.iterrows():
-    teams[row[0]] = Team(row[0],row[1],row[2])
-
-for index, row in nba_Season.iterrows():
-    gamePlayed=Game(row[0],row[1],row[2],row[3],row[4])
-    teams[row[1]].addGame(gamePlayed)
-    teams[row[2]].addGame(gamePlayed)
-for teamName,teamData in teams.items():
-    teamData.printData()
-for teamName,winsLoss in teams['Boston Celtics'].winLossD.items():
-    print(teamName,' Wins:',winsLoss[0] ,'Losses',winsLoss[1])
