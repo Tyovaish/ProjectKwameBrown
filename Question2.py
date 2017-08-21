@@ -74,12 +74,44 @@ class Game:
             return self.awayScore
     def printData(self):
         print(self.homeTeam.teamName, ' ', self.awayTeam.teamName)
+
 class Conference:
-    def __init__(self,competingConference,conferenceTeams,gamesOfTeamsInConference):
+    def __init__(self,competingConference):
         self.competingConference=competingConference
-        self.conferenceTeams=conferenceTeams
-        self.gamesPlayedByTeams=gamesOfTeamsInConference
+        self.conferenceTeams={}
+        self.gamesPlayedByEachTeam={}
+        self.ineligiblePlayoffTeams=[]
+    def addGame(self,game):
+        self.gamesPlayedByEachTeam[game.homeTeam]=game
+        self.gamesPlayedByEachTeam[game.awayTeam]=game
+
+    def addTeam(self,team):
+        self.conferenceTeams[team.teamName]=team
+
+    def playGame(self,game):
+        self.conferenceTeams[game.homeTeam].updateTeamStats(game)
+        self.conferenceTeams[game.awayTeam].updateTeamStats(game)
+        if game.homeTeam not in self.ineligiblePlayoffTeams and (not self.determinePlayoffEligibility(game.homeTeam)):
+            self.ineligiblePlayoffTeams.append(game.homeTeam)
+        if game.awayTeam not in self.ineligiblePlayoffTeams and (not self.determinePlayoffEligibility(game.awayTeam)):
+            self.ineligiblePlayoffTeams.append(game.awayTeam)
+
+    #def determinePlayoffEligibility(self,team):
+
+    #def findCurrentConferenceStandings(self):
+
 
 division_Info=pandas.read_csv("Division_Info.csv")
 nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
-teams = {}
+westernConference=0
+easternConference=Conference(westernConference)
+westernConference=Conference(easternConference)
+for index,row in division_Info.iteritems():
+    team=Team(row[0],row[1],row[2])
+    if row[2]=='East':
+        easternConference.addTeam(team)
+    else:
+        westernConference.addTeam(team)
+
+
+
