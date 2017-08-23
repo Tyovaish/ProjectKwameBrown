@@ -89,8 +89,8 @@ class Game:
     def playGame(self):
         self.homeTeam.updateTeamStats(self)
         self.awayTeam.updateTeamStats(self)
-        self.homeTeam.scheduleQueue.get()
-        self.awayTeam.scheduleQueue.get()
+        self.homeTeam.scheduleQueue.remove(self)
+        self.awayTeam.scheduleQueue.remove(self)
 
     def simulateGame(self, targetTeam, bottomEight):
 
@@ -119,8 +119,7 @@ class Game:
                 self.awayTeam.predictiveWins += 1
 
         #Pop game from simQueue of participants
-        self.homeTeam.simQueue.get()
-        self.awayTeam.simQueue.get()
+
 
 
 
@@ -173,7 +172,7 @@ def determinePlayoffEligibility(games, team):
 
     team.predictiveWins = team.numberOfWins + team.scheduleQueue.qsize()
 
-    sortedTeams = sorted(team.conferenceTeams.values(), key=Team.predictiveWins, reverse=True)
+    sortedTeams = sorted(team.conferenceTeams.values(), key=Team.predictiveWins)
     for i in range(8):
 
         actualTeam = sortedTeams[i]
@@ -188,9 +187,19 @@ def determinePlayoffEligibility(games, team):
 
     for simTeam in bottomEight:
         while simTeam.simQueue.empty() is False:
-            game.simulateGame(team, bottomEight)
+
+            simGame = simTeam.simQueue[0]
+            simTeam.simQueue.remove(simGame)
+            simGame.simulateGame(team, bottomEight)
+
+            if simGame.homeTeam != simTeam:
+                simGame.awayTeam.simQueue.remove(simGame)
+
+            else:
+                simGame.homeTeam.simQueue.remove(simGame)
 
     if(team.predictiveWins < max(bottomEight, key = Team.predictiveWins)):
+        #Put date in for playoff elimination
         return False
 
     return True
@@ -227,12 +236,12 @@ for index, row in nba_Season.iteritems():
     #row[3] == home score
     #row[4] == away score
 
-    g = Game(row[0], row[1], teams[row[2]], teams[row[3]], row[4], row[5])
+    g = Game(row[0], teams[row[1]], teams[row[2]], row[3], row[4], row[5])
 
     #We first establish a Game object for each tuple of the CSV
     games.append(g)
     teams[row[2]].scheduleQueue.put(g)
-    teams[row[3]].scheduleQueue.put(g)
+    teams[row[1]].scheduleQueue.put(g)
 
 for game in games:
     game.playGame()
@@ -242,5 +251,7 @@ for game in games:
         game.awayTeam.conferenceName.update()
 
     for te in teams:
-        determinePlayoffEligibility(teams[te], games)
-
+        if determinePlayoffEligibility(teams[te], games) is False:
+            #TODO Write date and team to excel
+            te.teamName
+            game.date
