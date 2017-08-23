@@ -1,14 +1,24 @@
 import pandas
 import time
 class Team:
-    def __init__(self,teamName,divisionName,conferenceName):
+    def __init__(self,teamName,divisionName):
         self.teamName=teamName
         self.divisionName=divisionName
-        self.conferenceName=conferenceName
+        self.conferenceName=0
         self.numberOfWins = 0
         self.numberOfLosses= 0
         self.winLossD = {}
         self.pointDifferentialPerTeam={}
+        self.conferenceRank = 0
+
+        self.scheduleQueue=[]
+
+        self.predictiveWins=0
+        self.predictiveLosses=0
+        self.predictiveRank=0
+
+    def setConference(self, conference):
+        self.conferenceName = conference
 
     def updateTeamStats(self,game):
         opposingTeamName=game.getOpposingTeam(self.teamName)
@@ -75,30 +85,108 @@ class Game:
     def printData(self):
         print(self.homeTeam.teamName, ' ', self.awayTeam.teamName)
 
+    def playGame(self):
+        self.homeTeam.updateTeamStats(self)
+        self.awayTeam.updateTeamStats(self)
+        self.homeTeam.scheduleQueue.get()
+        self.awayTeam.scheduleQueue.get()
+
+    def simulateGame(self, targetTeam, bottomEight):
+
+    #Target Team is the team that we want to have the best possible season
+
+        #Target Team always wins
+        if self.homeTeam == targetTeam or self.awayTeam == targetTeam:
+            return
+
+        #If it's interconference we assume our boy loses
+        if self.homeTeam.conferenceName != self.awayTeam.conferenceName:
+            return
+
+        #At this point we must be within our own conference and not playing the target team
+        #If both teams are bottom 8 then we assume the lesser wins
+        if self.homeTeam in bottomEight and self.awayTeam in bottomEight:
+            if self.homeTeam.predictiveWins > self.awayTeam.predictiveWins:
+                self.awayTeam.predictiveWins += 1
+            else:
+                self.homeTeam.predictiveWins += 1
+
+        else:
+            if self.homeTeam.predictiveWins > self.awayTeam.predictiveWins:
+                self.homeTeam.predictiveWins += 1
+            else:
+                self.awayTeam.predictiveWins += 1
+
+
+
 class Conference:
     def __init__(self,competingConference):
         self.competingConference=competingConference
         self.conferenceTeams={}
         self.gamesPlayedByEachTeam={}
         self.ineligiblePlayoffTeams=[]
+
     def addGame(self,game):
-        self.gamesPlayedByEachTeam[game.homeTeam]=game
-        self.gamesPlayedByEachTeam[game.awayTeam]=game
+        self.gamesPlayedByEachTeam[game.homeTeam].append(game)
+        self.gamesPlayedByEachTeam[game.awayTeam].append(game)
 
     def addTeam(self,team):
         self.conferenceTeams[team.teamName]=team
+        team.setConference(self)
 
-    def playGame(self,game):
-        self.conferenceTeams[game.homeTeam].updateTeamStats(game)
-        self.conferenceTeams[game.awayTeam].updateTeamStats(game)
-        if game.homeTeam not in self.ineligiblePlayoffTeams and (not self.determinePlayoffEligibility(game.homeTeam)):
-            self.ineligiblePlayoffTeams.append(game.homeTeam)
-        if game.awayTeam not in self.ineligiblePlayoffTeams and (not self.determinePlayoffEligibility(game.awayTeam)):
-            self.ineligiblePlayoffTeams.append(game.awayTeam)
+    def findCurrentConferenceStandings(self):
 
-    #def determinePlayoffEligibility(self,team):
+        sortedTeams = sorted(self.conferenceTeams.values(), key = Team.numberOfWins)
 
-    #def findCurrentConferenceStandings(self):
+        rank = 15;
+
+        for t in sortedTeams:
+            t.conferenceRank = rank
+            rank -= 1
+
+    def findPredictiveConferenceStandings(self):
+
+        sortedTeams = sorted(self.conferenceTeams.values(), key = Team.predictiveWins)
+
+        rank = 15;
+
+        for t in sortedTeams:
+            t.predictiveRank = rank
+            rank -= 1
+
+
+def determinePlayoffEligibility(games, team):
+    if(team.numberOfWins + team.numberOfLosses <= 41):
+        return True
+
+
+    bottomEight = []
+
+    for t in team.conferenceTeams.values():
+        t.predictiveWins = t.numberOfWins
+        t.predictiveLosses = t.numberOfLosses
+
+    team.predictiveWins = team.numberOfWins + team.scheduleQueue.qsize()
+
+    sortedTeams = sorted(team.conferenceTeams.values(), key=Team.predictiveWins, reverse=True)
+    for i in range(8):
+
+        actualTeam = sortedTeams[i]
+
+        if actualTeam == team:
+            i -= 1
+            continue
+
+        bottomEight.append(actualTeam)
+
+    for simTeam in bottomEight:
+        for game in list(simTeam.scheduleQueue.queue):
+            game.simulateGame(team, bottomEight)
+
+    if(team.predictiveWins < max(bottomEight, key = Team.predictiveWins)):
+        return False
+
+    return True
 
 
 division_Info=pandas.read_csv("Division_Info.csv")
@@ -106,12 +194,46 @@ nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
 westernConference=0
 easternConference=Conference(westernConference)
 westernConference=Conference(easternConference)
+teams = {}
+games = []
+
 for index,row in division_Info.iteritems():
-    team=Team(row[0],row[1],row[2])
+    team= Team(row[0],row[1])
+
+    #Conference.addTeam adds the conference itself to the team object
     if row[2]=='East':
         easternConference.addTeam(team)
     else:
         westernConference.addTeam(team)
 
+    teams[row[0]] = team
 
+for t in teams:
+    teams[t].winLossD = teams
+
+for index, row in nba_Season.iteritems():
+
+    #row[5] is away or home winner
+    #row[1] == home team
+    #row[2] == away team
+    #row[0] == date
+    #row[3] == home score
+    #row[4] == away score
+
+    g = Game(row[0], row[1], teams[row[2]], teams[row[3]], row[4], row[5])
+
+    #We first establish a Game object for each tuple of the CSV
+    games.append(g)
+    teams[row[2]].scheduleQueue.put(g)
+    teams[row[3]].scheduleQueue.put(g)
+
+for game in games:
+    game.playGame()
+    game.homeTeam.conferenceName.update()
+
+    if game.homeTeam.conferenceName != game.awayTeam.conferenceName:
+        game.awayTeam.conferenceName.update()
+
+    for te in teams:
+        determinePlayoffEligibility(teams[te], games)
 
