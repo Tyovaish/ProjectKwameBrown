@@ -12,6 +12,7 @@ class Team:
         self.conferenceRank = 0
 
         self.scheduleQueue=[]
+        self.simQueue=[]
 
         self.predictiveWins=0
         self.predictiveLosses=0
@@ -97,15 +98,15 @@ class Game:
 
         #Target Team always wins
         if self.homeTeam == targetTeam or self.awayTeam == targetTeam:
-            return
+            None
 
         #If it's interconference we assume our boy loses
-        if self.homeTeam.conferenceName != self.awayTeam.conferenceName:
-            return
+        elif self.homeTeam.conferenceName != self.awayTeam.conferenceName:
+            None
 
         #At this point we must be within our own conference and not playing the target team
         #If both teams are bottom 8 then we assume the lesser wins
-        if self.homeTeam in bottomEight and self.awayTeam in bottomEight:
+        elif self.homeTeam in bottomEight and self.awayTeam in bottomEight:
             if self.homeTeam.predictiveWins > self.awayTeam.predictiveWins:
                 self.awayTeam.predictiveWins += 1
             else:
@@ -116,6 +117,10 @@ class Game:
                 self.homeTeam.predictiveWins += 1
             else:
                 self.awayTeam.predictiveWins += 1
+
+        #Pop game from simQueue of participants
+        self.homeTeam.simQueue.get()
+        self.awayTeam.simQueue.get()
 
 
 
@@ -177,10 +182,12 @@ def determinePlayoffEligibility(games, team):
             i -= 1
             continue
 
+        actualTeam.simQueue = actualTeam.scheduleQueue
+
         bottomEight.append(actualTeam)
 
     for simTeam in bottomEight:
-        for game in list(simTeam.scheduleQueue.queue):
+        while simTeam.simQueue.empty() is False:
             game.simulateGame(team, bottomEight)
 
     if(team.predictiveWins < max(bottomEight, key = Team.predictiveWins)):
