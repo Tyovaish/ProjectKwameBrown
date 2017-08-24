@@ -23,10 +23,9 @@ class Team:
 
     def updateTeamStats(self,game):
         opposingTeamName=game.getOpposingTeam(self.teamName)
-        if opposingTeamName not in self.winLoss:
+        if opposingTeamName not in self.winLossD:
             self.winLossD[game.getOpposingTeam(self.teamName)]=[0,0]
-        if opposingTeamName not in self.winLossPercentagePerTeam:
-            self.pointDifferentialPerTeam[opposingTeamName] =0
+
 
         if game.isWinner(self.teamName):
             self.numberOfWins += 1
@@ -212,8 +211,9 @@ easternConference=Conference(westernConference)
 westernConference=Conference(easternConference)
 teams = {}
 games = []
+results = []
 
-for index,row in division_Info.iteritems():
+for index,row in division_Info.iterrows():
     team= Team(row[0],row[1])
 
     #Conference.addTeam adds the conference itself to the team object
@@ -222,12 +222,13 @@ for index,row in division_Info.iteritems():
     else:
         westernConference.addTeam(team)
 
-    teams[row[0]] = team
+    teams[str(row[0])] = team
+
 
 for t in teams:
     teams[t].winLossD = teams
 
-for index, row in nba_Season.iteritems():
+for index, row in nba_Season.iterrows():
 
     #row[5] is away or home winner
     #row[1] == home team
@@ -236,22 +237,22 @@ for index, row in nba_Season.iteritems():
     #row[3] == home score
     #row[4] == away score
 
-    g = Game(row[0], teams[row[1]], teams[row[2]], row[3], row[4], row[5])
+    g = Game(row[0], teams[str(row[1])], teams[str(row[2])], row[3], row[4], row[5])
 
     #We first establish a Game object for each tuple of the CSV
     games.append(g)
-    teams[row[2]].scheduleQueue.put(g)
-    teams[row[1]].scheduleQueue.put(g)
+    teams[row[2]].scheduleQueue.append(g)
+    teams[row[1]].scheduleQueue.append(g)
 
 for game in games:
     game.playGame()
-    game.homeTeam.conferenceName.update()
-
-    if game.homeTeam.conferenceName != game.awayTeam.conferenceName:
-        game.awayTeam.conferenceName.update()
 
     for te in teams:
-        if determinePlayoffEligibility(teams[te], games) is False:
+        print(str(te) + ' ')
+        print(str(teams[te]))
+
+        if determinePlayoffEligibility(games, teams[te]) is False:
             #TODO Write date and team to excel
-            te.teamName
-            game.date
+            results.append(tuple(te.teamName, game.date))
+
+results.to_csv('result')
