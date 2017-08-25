@@ -1,3 +1,5 @@
+import datetime
+
 import pandas
 import time
 class Team:
@@ -14,9 +16,15 @@ class Team:
         self.scheduleQueue=[]
         self.simQueue=[]
 
+        self.stillAlive = True
+
         self.predictiveWins=0
         self.predictiveLosses=0
         self.predictiveRank=0
+
+
+    def predictiveWinCount(self):
+        return self.predictiveWins
 
     def setConference(self, conference):
         self.conferenceName = conference
@@ -27,14 +35,14 @@ class Team:
             self.winLossD[game.getOpposingTeam(self.teamName)]=[0,0]
 
 
-        if game.isWinner(self.teamName):
+        if game.isWinner(self):
             self.numberOfWins += 1
             self.winLossD[opposingTeamName][0]+=1
         else:
             self.numberOfLosses += 1
             self.winLossD[opposingTeamName][1] += 1
         opposingTeamScore=game.getTeamScore(opposingTeamName)
-        teamScore=game.getTeamScore(self.teamName)
+        teamScore=game.getTeamScore(self)
         self.pointDifferentialPerTeam=teamScore-opposingTeamScore
 
     def getWinPercentage(self,teams):
@@ -55,8 +63,9 @@ class Team:
         print(self.teamName,' ',str(self.numberOfWins),'-',str(self.numberOfLosses))
 
 class Game:
-    def __init__(self,date,homeTeam, awayTeam, homeScore,awayScore,winningTeam):
-        self.date=time.strptime(date,"%m/%d/%Y")
+    def __init__(self,datePlayed,homeTeam, awayTeam, homeScore,awayScore,winningTeam):
+        d = datePlayed.split('/')
+        self.datePlayed=datetime.date(int(d[2]), int(d[0]), int(d[1]))
         self.homeTeam=homeTeam
         self.awayTeam=awayTeam
         self.homeScore=homeScore
@@ -68,6 +77,7 @@ class Game:
             self.winner=awayTeam
 
     def isWinner(self,team):
+
         if team==self.winner:
             return True
         else:
@@ -88,6 +98,7 @@ class Game:
     def playGame(self):
         self.homeTeam.updateTeamStats(self)
         self.awayTeam.updateTeamStats(self)
+        print('Winner is ' + str(self.winner.teamName))
         self.homeTeam.scheduleQueue.remove(self)
         self.awayTeam.scheduleQueue.remove(self)
 
@@ -125,7 +136,7 @@ class Game:
 class Conference:
     def __init__(self,competingConference):
         self.competingConference=competingConference
-        self.conferenceTeams={}
+        self.conferenceTeams=[]
         self.gamesPlayedByEachTeam={}
         self.ineligiblePlayoffTeams=[]
 
@@ -134,7 +145,7 @@ class Conference:
         self.gamesPlayedByEachTeam[game.awayTeam].append(game)
 
     def addTeam(self,team):
-        self.conferenceTeams[team.teamName]=team
+        self.conferenceTeams.append(team)
         team.setConference(self)
 
     def findCurrentConferenceStandings(self):
@@ -157,48 +168,58 @@ class Conference:
             t.predictiveRank = rank
             rank -= 1
 
+def predictiveWinCount(team):
+    return team.predictiveWins
+
+
+def WinCount(team):
+    return team.numberOfWins
+
 
 def determinePlayoffEligibility(games, team):
-    if(team.numberOfWins + team.numberOfLosses <= 41):
+    if(team.numberOfWins + team.numberOfLosses <= 41) or (team.stillAlive is False):
         return True
 
 
     bottomEight = []
 
-    for t in team.conferenceTeams.values():
+    for t in team.conferenceName.conferenceTeams:
         t.predictiveWins = t.numberOfWins
         t.predictiveLosses = t.numberOfLosses
 
-    team.predictiveWins = team.numberOfWins + team.scheduleQueue.qsize()
+    team.predictiveWins = team.numberOfWins + len(team.scheduleQueue)
 
-    sortedTeams = sorted(team.conferenceTeams.values(), key=Team.predictiveWins)
-    for i in range(8):
+    index = 0
+    sortedTeams = sorted(team.conferenceName.conferenceTeams, key=WinCount)
+    while len(bottomEight) < 7:
 
-        actualTeam = sortedTeams[i]
+        actualTeam = sortedTeams[index]
 
-        if actualTeam == team:
-            i -= 1
+        if actualTeam.teamName == team.teamName:
+            index += 1
             continue
 
-        actualTeam.simQueue = actualTeam.scheduleQueue
+        actualTeam.simQueue = actualTeam.scheduleQueue.copy()
 
         bottomEight.append(actualTeam)
+        index += 1
 
     for simTeam in bottomEight:
-        while simTeam.simQueue.empty() is False:
+        while len(simTeam.simQueue) != 0:
 
             simGame = simTeam.simQueue[0]
-            simTeam.simQueue.remove(simGame)
+
             simGame.simulateGame(team, bottomEight)
 
-            if simGame.homeTeam != simTeam:
-                simGame.awayTeam.simQueue.remove(simGame)
-
-            else:
+            if simGame in simGame.homeTeam.simQueue:
                 simGame.homeTeam.simQueue.remove(simGame)
 
-    if(team.predictiveWins < max(bottomEight, key = Team.predictiveWins)):
+            if simGame in simGame.awayTeam.simQueue:
+                simGame.awayTeam.simQueue.remove(simGame)
+
+    if(team.predictiveWins < max(bottomEight, key = predictiveWinCount).predictiveWins):
         #Put date in for playoff elimination
+        team.stillAlive = False
         return False
 
     return True
@@ -225,9 +246,6 @@ for index,row in division_Info.iterrows():
     teams[str(row[0])] = team
 
 
-for t in teams:
-    teams[t].winLossD = teams
-
 for index, row in nba_Season.iterrows():
 
     #row[5] is away or home winner
@@ -239,20 +257,23 @@ for index, row in nba_Season.iterrows():
 
     g = Game(row[0], teams[str(row[1])], teams[str(row[2])], row[3], row[4], row[5])
 
-    #We first establish a Game object for each tuple of the CSV
+    #We first  a Game object for each tuple of the CSV
     games.append(g)
     teams[row[2]].scheduleQueue.append(g)
     teams[row[1]].scheduleQueue.append(g)
 
 for game in games:
+
     game.playGame()
 
     for te in teams:
-        print(str(te) + ' ')
-        print(str(teams[te]))
 
         if determinePlayoffEligibility(games, teams[te]) is False:
             #TODO Write date and team to excel
-            results.append(tuple(te.teamName, game.date))
+            results.append([te, game.datePlayed])
 
-results.to_csv('result')
+
+for tup in results:
+    print('Team: ' + tup[0])
+    print('Date: ' + str(tup[1].month) + ' ' + str(tup[1].day) + ' ' + str(tup[1].year))
+    print()
