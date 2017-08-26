@@ -31,6 +31,7 @@ class Team:
         self.predictiveWins=0
         self.predictiveLosses=0
         self.predictiveRank=0
+        self.predictiveWinLossD
 
 
     def predictiveWinCount(self):
@@ -94,9 +95,9 @@ class Game:
             return False
     def getOpposingTeam(self,team):
         if self.homeTeam==team:
-            return self.awayTeam
+            return self.awayTeam.teamName
         else:
-            return self.homeTeam
+            return self.homeTeam.teamName
     def getTeamScore(self,team):
         if self.homeTeam == team:
             return self.homeScore
@@ -112,6 +113,8 @@ class Game:
         self.awayTeam.scheduleQueue.remove(self)
 
     def simulateGame(self, targetTeam, bottomEight):
+
+    #TODO add winLossD simulation
 
     #Target Team is the team that we want to have the best possible season
 
@@ -266,8 +269,45 @@ def determineTieBreaker2Teams(team1, team2):
     else:
         return team2
 
-    
+    if team1.divisionName != team2.divisionName:
+        d1 = sorted(team1.divisionName.teams, key = predictiveWinCount)
+        d2 = sorted(team2.divisionName.teams, key = predictiveWinCount)
 
+        if d1[0] == team1 and d2[0] != team2:
+            return team1
+
+        if d1[0] != team1 and d2[0] == team2:
+            return team2
+
+    t1 = 0
+    t2 = 0
+
+    for t in team1.divisionName.teams:
+        t1 += team1.winLossD[t.teamName][0]
+
+    for t in team2.divisionName.teams:
+        t2 += team2.winLossD[t.teamName][0]
+
+    if t1 > t2:
+        return team1
+
+    if t2 > t1:
+        return team2
+
+    t1 = 0
+    t2 = 0
+
+    for t in team1.conferenceName.conferenceTeams:
+        t1 += team1.winLossD[t.teamName][0]
+
+    for t in team2.conferenceName.conferenceTeams:
+        t2 += team2.winLossD[t.teamName][0]
+
+    if t1 > t2:
+        return team1
+
+    if t2 > t1:
+        return team2
 
 division_Info=pandas.read_csv("Division_Info.csv")
 nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
