@@ -31,7 +31,7 @@ class Team:
         self.predictiveWins=0
         self.predictiveLosses=0
         self.predictiveRank=0
-        self.predictiveWinLossD
+        self.predictiveWinLossD = {}
 
 
     def predictiveWinCount(self):
@@ -131,6 +131,8 @@ class Game:
         elif self.homeTeam in bottomEight and self.awayTeam in bottomEight:
             if self.homeTeam.predictiveWins > self.awayTeam.predictiveWins:
                 self.awayTeam.predictiveWins += 1
+                #TODO Just like this
+                self.awayTeam.predictiveWinLossD[self.homeTeam.teamName][0] += 1
             else:
                 self.homeTeam.predictiveWins += 1
 
