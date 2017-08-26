@@ -203,6 +203,8 @@ def determinePlayoffEligibility(games, team):
 
     team.predictiveWins = team.numberOfWins + len(team.scheduleQueue)
 
+    #TODO initialize predictiveWinLossD with a COPY of the information in winLossD, don't just pass the reference
+
     index = 0
     sortedTeams = sorted(team.conferenceName.conferenceTeams, key=WinCount)
     while len(bottomEight) < 7:
