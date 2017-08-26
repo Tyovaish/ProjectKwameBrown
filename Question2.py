@@ -2,16 +2,26 @@ import datetime
 
 import pandas
 import time
+class Division:
+    def __init__(self, name):
+        self.name = name
+        self.teams = []
+
+    def addTeam(self, team):
+        self.teams.append(team)
+        team.divisionName = self
+
 class Team:
     def __init__(self,teamName,divisionName):
         self.teamName=teamName
-        self.divisionName=divisionName
+        self.divisionName=0
         self.conferenceName=0
         self.numberOfWins = 0
         self.numberOfLosses= 0
         self.winLossD = {}
         self.pointDifferentialPerTeam={}
         self.conferenceRank = 0
+        self.divisionRank = 0
 
         self.scheduleQueue=[]
         self.simQueue=[]
@@ -98,7 +108,6 @@ class Game:
     def playGame(self):
         self.homeTeam.updateTeamStats(self)
         self.awayTeam.updateTeamStats(self)
-        print('Winner is ' + str(self.winner.teamName))
         self.homeTeam.scheduleQueue.remove(self)
         self.awayTeam.scheduleQueue.remove(self)
 
@@ -217,6 +226,24 @@ def determinePlayoffEligibility(games, team):
             if simGame in simGame.awayTeam.simQueue:
                 simGame.awayTeam.simQueue.remove(simGame)
 
+    tiedTeams = []
+
+    tiedTeams.append(team)
+
+    for t in bottomEight:
+        if t.predictiveWins == team.predictiveWins:
+            tiedTeams.append(t)
+
+    tieWinner = 0
+
+    if team.predictiveWins == max(bottomEight, key = predictiveWinCount).predictiveWins:
+        tieWinner = determineTieBreaker(tiedTeams)
+
+        if tieWinner != team:
+            # Put date in for playoff elimination
+            team.stillAlive = False
+            return False
+
     if(team.predictiveWins < max(bottomEight, key = predictiveWinCount).predictiveWins):
         #Put date in for playoff elimination
         team.stillAlive = False
@@ -224,12 +251,32 @@ def determinePlayoffEligibility(games, team):
 
     return True
 
+def determineTieBreaker(teams):
+    if len(teams) == 1:
+        return teams[0]
+
+    for t1 in teams:
+        for t2 in teams:
+            
+
+
 
 division_Info=pandas.read_csv("Division_Info.csv")
 nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
 westernConference=0
 easternConference=Conference(westernConference)
 westernConference=Conference(easternConference)
+
+divisions = {}
+atlanticDivision=Division('Atlantic')
+divisions['Atlantic'] = atlanticDivision
+divisions['Central']=Division('Central')
+divisions['Southeast']=Division('Southeast')
+divisions['Northwest']=Division('Northwest')
+divisions['Pacific']=Division('Pacific')
+divisions['Southwest']=Division('Southwest')
+
+
 teams = {}
 games = []
 results = []
@@ -243,7 +290,14 @@ for index,row in division_Info.iterrows():
     else:
         westernConference.addTeam(team)
 
+    divisions[str(row[1])].addTeam(team)
+
     teams[str(row[0])] = team
+
+    print(str(team.teamName))
+    print(str(team.divisionName.name))
+    print()
+
 
 
 for index, row in nba_Season.iterrows():
