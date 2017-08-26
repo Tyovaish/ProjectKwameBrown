@@ -255,10 +255,18 @@ def determineTieBreaker(teams):
     if len(teams) == 1:
         return teams[0]
 
-    for t1 in teams:
-        for t2 in teams:
-            
+    if len(teams) == 2:
+        return determineTieBreaker2Teams(teams[0], teams[1])
 
+
+def determineTieBreaker2Teams(team1, team2):
+    if team1.winLossD[team2.teamName][0] > team2.winLossD[team1.teamName][0]:
+        return team1
+
+    else:
+        return team2
+
+    
 
 
 division_Info=pandas.read_csv("Division_Info.csv")
