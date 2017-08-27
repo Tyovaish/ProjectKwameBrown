@@ -94,12 +94,12 @@ class Game:
         else:
             return False
     def getOpposingTeam(self,team):
-        if self.homeTeam==team:
+        if self.homeTeam.teamName==team:
             return self.awayTeam.teamName
         else:
             return self.homeTeam.teamName
     def getTeamScore(self,team):
-        if self.homeTeam == team:
+        if self.homeTeam.teamName == team:
             return self.homeScore
         else:
             return self.awayScore
@@ -114,13 +114,21 @@ class Game:
 
     def simulateGame(self, targetTeam, bottomEight):
 
-    #TODO add winLossD simulation
+                #TODO add winLossD simulation
+        if self.awayTeam.teamName not in self.homeTeam.predictiveWinLossD:
+            self.homeTeam.predictiveWinLossD[self.awayTeam.teamName] = [0, 0]
 
+        if self.homeTeam.teamName not in self.awayTeam.predictiveWinLossD:
+            self.awayTeam.predictiveWinLossD[self.homeTeam.teamName] = [0, 0]
     #Target Team is the team that we want to have the best possible season
 
         #Target Team always wins
         if self.homeTeam == targetTeam or self.awayTeam == targetTeam:
-            None
+            if self.homeTeam != targetTeam:
+                targetTeam.predictiveWinLossD[self.homeTeam.teamName][0] += 1
+
+            if self.awayTeam != targetTeam:
+                targetTeam.predictiveWinLossD[self.awayTeam.teamName][0] += 1
 
         #If it's interconference we assume our boy loses
         elif self.homeTeam.conferenceName != self.awayTeam.conferenceName:
@@ -135,12 +143,16 @@ class Game:
                 self.awayTeam.predictiveWinLossD[self.homeTeam.teamName][0] += 1
             else:
                 self.homeTeam.predictiveWins += 1
+                self.homeTeam.predictiveWinLossD[self.awayTeam.teamName][0] += 1
 
         else:
             if self.homeTeam.predictiveWins > self.awayTeam.predictiveWins:
                 self.homeTeam.predictiveWins += 1
+                self.homeTeam.predictiveWinLossD[self.awayTeam.teamName][0] += 1
+
             else:
                 self.awayTeam.predictiveWins += 1
+                self.awayTeam.predictiveWinLossD[self.homeTeam.teamName][0] += 1
 
         #Pop game from simQueue of participants
 
@@ -203,6 +215,11 @@ def determinePlayoffEligibility(games, team):
 
     team.predictiveWins = team.numberOfWins + len(team.scheduleQueue)
 
+    team.predictiveWinLoss = {}
+
+    for t in team.winLossD:
+        team.predictiveWinLossD[t] = team.winLossD[t].copy()
+
     #TODO initialize predictiveWinLossD with a COPY of the information in winLossD, don't just pass the reference
 
     index = 0
@@ -211,11 +228,17 @@ def determinePlayoffEligibility(games, team):
 
         actualTeam = sortedTeams[index]
 
+
+
         if actualTeam.teamName == team.teamName:
             index += 1
             continue
 
+        actualTeam.predictiveWinLossD = {}
         actualTeam.simQueue = actualTeam.scheduleQueue.copy()
+
+        for t in actualTeam.winLossD:
+            actualTeam.predictiveWinLossD[t] = actualTeam.winLossD[t].copy()
 
         bottomEight.append(actualTeam)
         index += 1
@@ -259,15 +282,22 @@ def determinePlayoffEligibility(games, team):
     return True
 
 def determineTieBreaker(teams):
-    if len(teams) == 1:
-        return teams[0]
 
-    if len(teams) == 2:
-        return determineTieBreaker2Teams(teams[0], teams[1])
+    while len(teams) > 1:
+        tWin = determineTieBreaker2Teams(teams[0], teams[1])
+
+        if(tWin == teams[0]):
+            teams.remove(teams[1])
+        else:
+            teams.remove(teams[0])
+
+        return teams[0]
 
 
 def determineTieBreaker2Teams(team1, team2):
-    if team1.winLossD[team2.teamName][0] > team2.winLossD[team1.teamName][0]:
+
+
+    if team1.predictiveWinLossD[team2.teamName][0] > team2.predictiveWinLossD[team1.teamName][0]:
         return team1
 
     else:
@@ -287,10 +317,10 @@ def determineTieBreaker2Teams(team1, team2):
     t2 = 0
 
     for t in team1.divisionName.teams:
-        t1 += team1.winLossD[t.teamName][0]
+        t1 += team1.predictiveWinLossD[t.teamName][0]
 
     for t in team2.divisionName.teams:
-        t2 += team2.winLossD[t.teamName][0]
+        t2 += team2.predictiveWinLossD[t.teamName][0]
 
     if t1 > t2:
         return team1
@@ -302,10 +332,10 @@ def determineTieBreaker2Teams(team1, team2):
     t2 = 0
 
     for t in team1.conferenceName.conferenceTeams:
-        t1 += team1.winLossD[t.teamName][0]
+        t1 += team1.predictiveWinLossD[t.teamName][0]
 
     for t in team2.conferenceName.conferenceTeams:
-        t2 += team2.winLossD[t.teamName][0]
+        t2 += team2.predictiveWinLossD[t.teamName][0]
 
     if t1 > t2:
         return team1
@@ -345,10 +375,6 @@ for index,row in division_Info.iterrows():
     divisions[str(row[1])].addTeam(team)
 
     teams[str(row[0])] = team
-
-    print(str(team.teamName))
-    print(str(team.divisionName.name))
-    print()
 
 
 
