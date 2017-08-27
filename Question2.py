@@ -1,7 +1,7 @@
 import datetime
-
+import sys
 import pandas
-import time
+
 class Division:
     def __init__(self, name):
         self.name = name
@@ -343,8 +343,8 @@ def determineTieBreaker2Teams(team1, team2):
     if t2 > t1:
         return team2
 
-division_Info=pandas.read_csv("Division_Info.csv")
-nba_Season=pandas.read_csv("NBA_2016_2017_Scores.csv")
+division_Info=pandas.read_csv(sys.argv[0])
+nba_Season=pandas.read_csv(sys.argv[1])
 westernConference=0
 easternConference=Conference(westernConference)
 westernConference=Conference(easternConference)
