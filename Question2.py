@@ -361,7 +361,8 @@ divisions['Southwest']=Division('Southwest')
 
 teams = {}
 games = []
-results = []
+resultsTeam = []
+resultsDate = []
 
 for index,row in division_Info.iterrows():
     team= Team(row[0],row[1])
@@ -402,10 +403,8 @@ for game in games:
 
         if determinePlayoffEligibility(games, teams[te]) is False:
             #TODO Write date and team to excel
-            results.append([te, game.datePlayed])
+            resultsTeam.append(te)
+            resultsDate.append(game.datePlayed)
 
-
-for tup in results:
-    print('Team: ' + tup[0])
-    print('Date: ' + str(tup[1].month) + ' ' + str(tup[1].day) + ' ' + str(tup[1].year))
-    print()
+df = pandas.DataFrame({"Date" : resultsDate, "Team Name" : resultsTeam})
+df.to_csv("submission.csv", index = False)
