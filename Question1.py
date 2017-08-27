@@ -7,4 +7,4 @@ def findProbabilityOfConsecutiveLoses(numberOfGamesInSeason,consecutiveLossThres
 numberOfGamesInSeason = 82
 consecutiveLossThreshold=2
 probOfLosing = .2
-print(findProbabilityOfConsecutiveLoses(numberOfGamesInSeason,consecutiveLossThreshold,probOfLosing))
+print(1 - findProbabilityOfConsecutiveLoses(numberOfGamesInSeason,consecutiveLossThreshold,probOfLosing))
