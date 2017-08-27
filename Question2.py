@@ -404,7 +404,12 @@ for game in games:
         if determinePlayoffEligibility(games, teams[te]) is False:
             #TODO Write date and team to excel
             resultsTeam.append(te)
-            resultsDate.append(game.datePlayed)
+            resultsDate.append(str(game.datePlayed.month) + '/' + str(game.datePlayed.day) + '/' + str(game.datePlayed.year))
 
-df = pandas.DataFrame({"Date" : resultsDate, "Team Name" : resultsTeam})
-df.to_csv("submission.csv", index = False)
+for te in teams:
+    if teams[te].stillAlive:
+        resultsTeam.append(te)
+        resultsDate.append('Playoffs')
+
+df = pandas.DataFrame({"Team" : resultsTeam, "Date Eliminated" : resultsDate})
+df.to_csv("NBA_Clinch_Dates.csv", index = False)
